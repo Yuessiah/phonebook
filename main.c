@@ -30,6 +30,7 @@ static double diff_in_second(struct timespec t1, struct timespec t2)
 int main(int argc, char *argv[])
 {
     FILE *fp;
+    int i;
     char line[MAX_LAST_NAME_SIZE];
     struct timespec start, end;
     double cpu_time1, cpu_time2;
@@ -74,7 +75,7 @@ int main(int argc, char *argv[])
     fclose(fp);
 
     /* the givn last name to find */
-    char input[MAX_LAST_NAME_SIZE] = "zyxel";
+    char input[][MAX_LAST_NAME_SIZE] = {"zyxel", "zyrian", "zymophoric", "zymophyte", "zymoplastic"};
 
 #ifndef OPT
 #if defined(__GNUC__)
@@ -84,12 +85,14 @@ int main(int argc, char *argv[])
 
     /* compute the execution time */
     clock_gettime(CLOCK_REALTIME, &start);
+    for(i = 0; i < sizeof(input)/MAX_LAST_NAME_SIZE; i++) {
 #ifdef OPT
-    findName(input, table);
+        findName(input[i], table);
 #else
-    e = pHead;
-    findName(input, e);
+        e = pHead;
+        findName(input[i], e);
 #endif
+    }
     clock_gettime(CLOCK_REALTIME, &end);
     cpu_time2 = diff_in_second(start, end);
 
@@ -101,7 +104,6 @@ int main(int argc, char *argv[])
     printf("execution time of findName() : %lf sec\n", cpu_time2);
 
 #ifdef OPT
-    int i;
     for(i = 0; i < TABLE_SIZE; i++) {
         brief *step = table[i];
         while(step) {
