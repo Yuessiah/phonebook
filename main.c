@@ -30,7 +30,6 @@ static double diff_in_second(struct timespec t1, struct timespec t2)
 int main(int argc, char *argv[])
 {
     FILE *fp;
-    int i = 0;
     char line[MAX_LAST_NAME_SIZE];
     struct timespec start, end;
     double cpu_time1, cpu_time2;
@@ -42,23 +41,31 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+#ifdef OPT
+    brief **table = create_table();
+#else
     /* build the entry */
     entry *pHead, *e;
     pHead = (entry *) malloc(sizeof(entry));
     printf("size of entry : %lu bytes\n", sizeof(entry));
     e = pHead;
     e->pNext = NULL;
+#endif
 
+#ifndef OPT
 #if defined(__GNUC__)
     __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
 #endif
+#endif
+
     clock_gettime(CLOCK_REALTIME, &start);
     while (fgets(line, sizeof(line), fp)) {
-        while (line[i] != '\0')
-            i++;
-        line[i - 1] = '\0';
-        i = 0;
+        line[strlen(line)-1] = '\0';
+#ifdef OPT
+        append(line, table);
+#else
         e = append(line, e);
+#endif
     }
     clock_gettime(CLOCK_REALTIME, &end);
     cpu_time1 = diff_in_second(start, end);
@@ -66,22 +73,23 @@ int main(int argc, char *argv[])
     /* close file as soon as possible */
     fclose(fp);
 
-    e = pHead;
-
     /* the givn last name to find */
     char input[MAX_LAST_NAME_SIZE] = "zyxel";
-    e = pHead;
 
-    assert(findName(input, e) &&
-           "Did you implement findName() in " IMPL "?");
-    assert(0 == strcmp(findName(input, e)->lastName, "zyxel"));
-
+#ifndef OPT
 #if defined(__GNUC__)
     __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
 #endif
+#endif
+
     /* compute the execution time */
     clock_gettime(CLOCK_REALTIME, &start);
+#ifdef OPT
+    findName(input, table);
+#else
+    e = pHead;
     findName(input, e);
+#endif
     clock_gettime(CLOCK_REALTIME, &end);
     cpu_time2 = diff_in_second(start, end);
 
@@ -92,8 +100,22 @@ int main(int argc, char *argv[])
     printf("execution time of append() : %lf sec\n", cpu_time1);
     printf("execution time of findName() : %lf sec\n", cpu_time2);
 
+#ifdef OPT
+    int i;
+    for(i = 0; i < TABLE_SIZE; i++) {
+        brief *step = table[i];
+        while(step) {
+            brief *tmp = step;
+            step = step->pNext;
+            free(tmp->detail);
+            free(tmp);
+        }
+    }
+    free(table);
+#else
     if (pHead->pNext) free(pHead->pNext);
     free(pHead);
+#endif
 
     return 0;
 }
